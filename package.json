@@ -1,6 +1,6 @@
 {
   "name": "rxjs-iterable",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Create observables from iterables with backpressure support",
   "main": "dist/mod.js",
   "repository": "https://github.com/tim-smart/rxjs-iterable.git",
