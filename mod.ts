@@ -65,3 +65,66 @@ export function from<T>(
 
   return [ob, pull];
 }
+
+type Writable<T> = Readonly<{
+  iterator: AsyncGenerator<T>;
+  write: (data: T) => void;
+  cancel: () => void;
+}>;
+
+type WritableWithoutCancel<T> = Readonly<{
+  iterator: AsyncGenerator<T>;
+  write: (data: T) => void;
+}>;
+
+/**
+ * Creates a `Writable`, which is like a subject but for async iterables.
+ */
+export function writable<T>(): Writable<T> {
+  let complete = false;
+  let queue: T[] = [];
+  let signal: (() => void) | undefined;
+
+  function write(data: T) {
+    if (complete) return;
+    queue.push(data);
+    signal?.();
+  }
+
+  function cancel() {
+    complete = true;
+    signal?.();
+  }
+
+  async function* iterator() {
+    while (!complete) {
+      for (let index = 0; index < queue.length; index++) {
+        yield queue[index];
+        queue[index] = undefined as any;
+      }
+      queue = [];
+
+      await new Promise<void>((r) => (signal = r));
+      signal = undefined;
+    }
+  }
+
+  return {
+    iterator: iterator(),
+    write,
+    cancel,
+  };
+}
+
+/**
+ * Emits a single `WritableWithoutCancel`.
+ */
+export function writable$<T>(): Rx.Observable<WritableWithoutCancel<T>> {
+  return new Rx.Observable((s) => {
+    const { iterator, write, cancel } = writable<T>();
+
+    s.next({ iterator, write });
+
+    return cancel;
+  });
+}
