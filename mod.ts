@@ -11,8 +11,11 @@ type TPartialOptions = Partial<TOptions>;
 export function from<T>(
   iterable: AsyncIterable<T> | Iterable<T>,
   { initialCount = 1 }: TPartialOptions = {}
-): [Rx.Observable<T>, () => void] {
-  let push = () => {};
+): [obserable: Rx.Observable<T>, pull: () => void] {
+  let actualPull = () => {};
+  function pull() {
+    actualPull();
+  }
 
   const ob = new Rx.Observable<T>((s) => {
     let iterator: AsyncIterator<T> | Iterator<T>;
@@ -42,7 +45,7 @@ export function from<T>(
     }
 
     let complete = false;
-    push = () => {
+    actualPull = () => {
       if (complete) return;
       try {
         Promise.resolve(iterator.next()).then(handleResult).catch(handleError);
@@ -51,13 +54,14 @@ export function from<T>(
       }
     };
 
-    range(initialCount).forEach(push);
+    range(initialCount).forEach(actualPull);
 
     return () => {
       complete = true;
+      actualPull = () => {};
       iterator.return?.();
     };
   });
 
-  return [ob, push];
+  return [ob, pull];
 }
