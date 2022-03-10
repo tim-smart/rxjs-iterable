@@ -1,6 +1,6 @@
 import * as Rx from "rxjs";
 
-const range = (count: number) => [...Array(count).keys()];
+const range = (count: number) => Array.from(Array(count).keys());
 
 export type TOptions = {
   /** How many items to emit on creation */
